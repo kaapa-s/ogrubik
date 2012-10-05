@@ -1,0 +1,314 @@
+diff -rupN kcube1.0/cube.h src/kcube/cube.h
+--- kcube1.0/cube.h	2008-01-11 06:46:58.000000000 +0100
++++ src/kcube/cube.h	2012-08-27 22:58:54.431357088 +0200
+@@ -112,7 +112,12 @@ public:
+ 
+ 	// Dump cube state
+ 	virtual void Dump(void);
++	// The cubies
++	int CornerCubiePermutations[NumberOfCornerCubies];
++	int CornerCubieOrientations[NumberOfCornerCubies];
+ 
++	int EdgeCubiePermutations[NumberOfEdgeCubies];
++	int EdgeCubieOrientations[NumberOfEdgeCubies];
+ protected:
+ 	// Cube moves
+ 	void Move_R(void);
+@@ -162,12 +167,7 @@ protected:
+ 	void Cube::ClockwiseTwist(CornerCubie cubie);
+ 	void Cube::CounterClockwiseTwist(CornerCubie cubie);
+ 
+-	// The cubies
+-	int CornerCubiePermutations[NumberOfCornerCubies];
+-	int CornerCubieOrientations[NumberOfCornerCubies];
+ 
+-	int EdgeCubiePermutations[NumberOfEdgeCubies];
+-	int EdgeCubieOrientations[NumberOfEdgeCubies];
+ 
+ private:
+ 	// Twist tables
+diff -rupN kcube1.0/kcube.cpp src/kcube/kcube.cpp
+--- kcube1.0/kcube.cpp	2008-01-11 06:46:58.000000000 +0100
++++ src/kcube/kcube.cpp	2012-08-27 22:58:54.428023756 +0200
+@@ -1,3 +1,4 @@
++#if 0
+ // kcube.cpp - Kociemba Cube Solver main program
+ //
+ // This program implements an algorithm devised by Herbert
+@@ -102,3 +103,4 @@ void main(int argc, char* argv[])
+ 	solver.InitializeTables();
+ 	(void)solver.Solve(cube);
+ }	
++#endif
+\ No newline at end of file
+diff -rupN kcube1.0/movetabl.cpp src/kcube/movetabl.cpp
+--- kcube1.0/movetabl.cpp	2008-01-11 06:46:58.000000000 +0100
++++ src/kcube/movetabl.cpp	2012-08-27 22:58:54.431357088 +0200
+@@ -1,10 +1,10 @@
+ // movetabl.cpp - MoveTable class implementation
+ 
+ #include "movetabl.h"	// MoveTable
+-#include <iostream.h>
+-#include <fstream.h>
+-#include <iomanip.h>
+-
++#include <iostream>
++#include <fstream>
++#include <iomanip>
++using namespace std;
+ 
+ MoveTable::MoveTable(Cube& cube, int tableSize, int phase2)
+ 	:TheCube(cube),
+@@ -12,8 +12,8 @@ MoveTable::MoveTable(Cube& cube, int tab
+ 	 Phase2(phase2)
+ {
+ 	// Allocate table storage
+-	Table = (int (*)[Cube::Move::NumberOfClockwiseQuarterTurnMoves]) // the cast
+-	        (new int[TableSize*Cube::Move::NumberOfClockwiseQuarterTurnMoves]); // the allocation
++	Table = (int (*)[Cube::NumberOfClockwiseQuarterTurnMoves]) // the cast
++	        (new int[TableSize*Cube::NumberOfClockwiseQuarterTurnMoves]); // the allocation
+ }
+ 
+ MoveTable::~MoveTable()
+@@ -24,7 +24,7 @@ MoveTable::~MoveTable()
+ 
+ void MoveTable::Initialize(char* fileName)
+ {
+-	ifstream infile(fileName, ios::in|ios::binary|ios::nocreate);
++	ifstream infile(fileName, ios::in|ios::binary);
+ 	if (!infile)	// If the move mapping table file is absent...
+ 	{
+ 		// Generate the table and save it to a file
+@@ -58,14 +58,14 @@ void MoveTable::Generate(void)
+ 		OrdinalToCubeState(ordinal);
+ 
+ 		// Initialize the possible moves for each entry
+-		for (move = Cube::Move::R; move <= Cube::Move::B; move++)
++		for (move = Cube::R; move <= Cube::B; move++)
+ 		{
+ 			// Apply this move
+ 
+ 			// Phase 1 is the group spanned by <U,D,R,L,F,B>
+ 			// Phase 2 is the group spanned by <U,D,R2,L2,F2,B2>
+ 			move2 = move;
+-			if (Phase2 && move != Cube::Move::U && move != Cube::Move::D)
++			if (Phase2 && move != Cube::U && move != Cube::D)
+ 				move2 = Cube::QuarterTurnToHalfTurnMove(move);
+ 
+ 			TheCube.ApplyMove(move2);
+@@ -89,7 +89,7 @@ void MoveTable::Save(char* fileName)
+ 	int index;
+ 	for (index = 0; index < TableSize; index++)
+ 		outfile.write((char*)&Table[index],
+-			Cube::Move::NumberOfClockwiseQuarterTurnMoves*sizeof(int));
++			Cube::NumberOfClockwiseQuarterTurnMoves*sizeof(int));
+ }
+ 
+ void MoveTable::Load(ifstream& infile)
+@@ -97,7 +97,7 @@ void MoveTable::Load(ifstream& infile)
+ 	int index;
+ 	for (index = 0; index < TableSize; index++)
+ 		infile.read((char*)&Table[index],
+-			Cube::Move::NumberOfClockwiseQuarterTurnMoves*sizeof(int));
++			Cube::NumberOfClockwiseQuarterTurnMoves*sizeof(int));
+ }
+ 
+ // Output the move table in human readable form
+@@ -110,12 +110,12 @@ void MoveTable::Dump(void)
+ 	{
+ 		cout << setw(8) << ordinal << ": ";
+ 		// For each possible move...
+-		for (move = Cube::Move::R; move <= Cube::Move::B; move++)
++		for (move = Cube::R; move <= Cube::B; move++)
+ 		{
+ 			move2 = move;
+ 			if (Phase2)
+ 			{
+-				if (move != Cube::Move::U && move != Cube::Move::D)
++				if (move != Cube::U && move != Cube::D)
+ 					move2 = Cube::QuarterTurnToHalfTurnMove(move);
+ 			}
+ 			cout << Cube::NameOfMove(move2) << ":"
+diff -rupN kcube1.0/movetabl.h src/kcube/movetabl.h
+--- kcube1.0/movetabl.h	2008-01-11 06:46:58.000000000 +0100
++++ src/kcube/movetabl.h	2012-08-27 22:58:54.431357088 +0200
+@@ -9,8 +9,8 @@
+ #define	_movetabl_h
+ 
+ #include "cube.h"
+-class ifstream;
+-
++#include <fstream>
++using namespace std;
+ class MoveTable
+ {
+ public:
+@@ -59,7 +59,7 @@ private:
+ 	int TableSize;
+ 	int Phase2;
+ 	// The table pointer
+-	int (*Table)[Cube::Move::NumberOfClockwiseQuarterTurnMoves];
++	int (*Table)[Cube::NumberOfClockwiseQuarterTurnMoves];
+ };
+ 
+ #endif	// _movetabl_h
+diff -rupN kcube1.0/pruningt.cpp src/kcube/pruningt.cpp
+--- kcube1.0/pruningt.cpp	2008-01-11 06:46:58.000000000 +0100
++++ src/kcube/pruningt.cpp	2012-08-27 22:58:54.451357088 +0200
+@@ -2,9 +2,9 @@
+ 
+ #include "pruningt.h"	// PruningTable
+ #include "movetabl.h"	// MoveTable
+-#include <iostream.h>
+-#include <fstream.h>
+-#include <iomanip.h>
++#include <iostream>
++#include <fstream>
++#include <iomanip>
+ 
+ PruningTable::PruningTable(MoveTable& moveTable1, MoveTable& moveTable2,
+ 	int homeOrdinal1, int homeOrdinal2)
+@@ -31,7 +31,7 @@ PruningTable::PruningTable(MoveTable& mo
+ 
+ void PruningTable::Initialize(char* fileName)
+ {
+-	ifstream infile(fileName, ios::in|ios::binary|ios::nocreate);
++	ifstream infile(fileName, ios::in|ios::binary);
+ 	if (!infile)	// If the pruning table file is absent...
+ 	{
+ 		// Generate the table and save it to a file
+@@ -86,7 +86,7 @@ void PruningTable::Generate(void)
+ 			if (GetValue(index) == depth)
+ 			{
+ 				// Apply each possible move
+-				for (move = Cube::Move::R; move <= Cube::Move::B; move++)
++				for (move = Cube::R; move <= Cube::B; move++)
+ 				{
+ 					PruningTableIndexToMoveTableIndices(index, ordinal1, ordinal2);
+ 					// Apply each of the three quarter turns
+diff -rupN kcube1.0/pruningt.h src/kcube/pruningt.h
+--- kcube1.0/pruningt.h	2008-01-11 06:46:58.000000000 +0100
++++ src/kcube/pruningt.h	2012-08-27 22:58:54.434690421 +0200
+@@ -17,9 +17,9 @@
+ //
+ #ifndef	_pruningt_h
+ #define	_pruningt_h
+-
++#include <fstream>
++using namespace std;
+ class MoveTable;
+-class ifstream;
+ 
+ class PruningTable
+ {
+diff -rupN kcube1.0/solver.cpp src/kcube/solver.cpp
+--- kcube1.0/solver.cpp	2008-01-11 06:46:58.000000000 +0100
++++ src/kcube/solver.cpp	2012-08-27 22:58:54.431357088 +0200
+@@ -2,8 +2,8 @@
+ 
+ #include "solver.h"		// Solver
+ 
+-#include <iostream.h>
+-#include <iomanip.h>
++#include <iostream>
++#include <iomanip>
+ 
+ Solver::Solver(void)
+ 	// Phase 1 move mapping tables
+@@ -183,7 +183,7 @@ int Solver::Search1(int twist, int flip,
+ 		if (depth >= minSolutionLength-1)
+ 			return OPTIMUM_FOUND;
+ 		
+-		for (move = Cube::Move::R; move <= Cube::Move::B; move++)
++		for (move = Cube::R; move <= Cube::B; move++)
+ 		{
+ 			if (Disallowed(move, solutionMoves1, depth)) continue;
+ 				
+@@ -286,7 +286,7 @@ int Solver::Search2(
+ 		//   length than the current best solution
+ 		if (solutionLength1 + depth >= minSolutionLength-1) return ABORT;
+ 
+-		for (move = Cube::Move::R; move <= Cube::Move::B; move++)
++		for (move = Cube::R; move <= Cube::B; move++)
+ 		{
+ 			if (Disallowed(move, solutionMoves2, depth)) continue;
+ 
+@@ -296,7 +296,7 @@ int Solver::Search2(
+ 
+ 			solutionMoves2[depth] = move;
+ 			powerLimit = 4;
+-			if (move != Cube::Move::U && move != Cube::Move::D) powerLimit=2;
++			if (move != Cube::U && move != Cube::D) powerLimit=2;
+ 
+ 			for (power = 1; power < powerLimit; power++)
+ 			{
+@@ -364,11 +364,11 @@ int Solver::Disallowed(int move, int* so
+ 
+ 		//   Disallow a move of an opposite face if the current face
+ 		//     moved is B,L, or D. (BF, LR, DU are same as FB,RL,UD)
+-		if ((move == Cube::Move::F) && solutionMoves[depth-1] == Cube::Move::B)
++		if ((move == Cube::F) && solutionMoves[depth-1] == Cube::B)
+ 			return 1;
+-		if ((move == Cube::Move::R) && solutionMoves[depth-1] == Cube::Move::L)
++		if ((move == Cube::R) && solutionMoves[depth-1] == Cube::L)
+ 			return 1;
+-		if ((move == Cube::Move::U) && solutionMoves[depth-1] == Cube::Move::D)
++		if ((move == Cube::U) && solutionMoves[depth-1] == Cube::D)
+ 			return 1;
+ 
+ 		// Disallow 3 or more consecutive moves of opposite faces
+@@ -391,13 +391,18 @@ void Solver::PrintSolution(void)
+ 		cout << Cube::NameOfMove(TranslateMove(solutionMoves2[i], solutionPowers2[i], 1))
+ 		     << " ";
+ 	cout << "(" << solutionLength1 + solutionLength2 << ")" << endl;
++    for (i = 0; i < solutionLength1; i++)
++        solution.push_back(TranslateMove(solutionMoves1[i], solutionPowers1[i], 0));
++    for (i = 0; i < solutionLength2; i++)
++        solution.push_back(TranslateMove(solutionMoves2[i], solutionPowers2[i], 1));
++    throw std::exception();
+ }
+ 
+ int Solver::TranslateMove(int move, int power, int phase2)
+ {
+ 	int translatedMove = move;
+ 
+-	if (phase2 && move != Cube::Move::U && move != Cube::Move::D)
++	if (phase2 && move != Cube::U && move != Cube::D)
+ 		power = 2;
+ 		
+ 	if (power == 2)
+diff -rupN kcube1.0/solver.h src/kcube/solver.h
+--- kcube1.0/solver.h	2008-01-11 06:46:58.000000000 +0100
++++ src/kcube/solver.h	2012-08-27 22:58:54.431357088 +0200
+@@ -65,7 +65,7 @@
+ #include "kocicube.h"	// KociembaCube
+ #include "kocimovt.h"	// Kociemba's move mapping tables
+ #include "pruningt.h"	// PruningTable
+-
++#include <list>
+ class Solver
+ {
+ public:
+@@ -90,7 +90,7 @@ public:
+ 	//   Note: you may not need to call this as the best
+ 	//   solution, found so far, is output during the search
+ 	void PrintSolution(void);
+-
++	std::list<int> solution;
+ private:
+ 
+ 	enum { Huge = 10000 };	// An absurdly large number
+diff -rupN kcube1.0/vector.cpp src/kcube/vector.cpp
+--- kcube1.0/vector.cpp	2008-01-11 06:46:58.000000000 +0100
++++ src/kcube/vector.cpp	2012-08-27 22:59:28.608023629 +0200
+@@ -1,8 +1,8 @@
+ // Vector manipulation routines
+ 
+ #include <string.h>		// For memcpy()
+-#include <iostream.h>
+-
++#include <iostream>
++using namespace std;
+ // CopyVector - Clone a vector
+ void CopyVector(int* fromVector, int* toVector, int n)
+ {
